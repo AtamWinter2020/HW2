@@ -162,14 +162,21 @@ s_OP:
 	cmp		%r12, $40
 	jne		OP_else 		# c == '('
 	movq	$s_EXP2, %r14	# state = EXP2
-	# TODO: recusive call and calc op
+	# Call recursively
+	pushq	%rdi			# Backup string_convert
+	call calc_expr_overloaded
+	popq	%rdi			# Restore string_convert
+	# End recursive call
+	# Call calc_op
+	movq	-40(%rsp), %rsi	# op_char is the 1st param
+	movq	(%rsp), %rsi	# num is the 2nd param
+	movq	%rax, %rdx		# 3rd param is the recursive call
+	# End call calc_op
+	movq	%rax, (%rsp)	# num = result
 	jmp		read_loop 		# switch break
 OP_else:					# c != '('
 	movq	$s_NUM2, %r14	# state = NUM2
 	jmp		read_loop		# switch break
-
-	
-	
 
 epilogue_overloaded:
 	movq	-24(%rsp), %r14
@@ -177,10 +184,6 @@ epilogue_overloaded:
 	movq	-8(%rsp), %r12
 	leave
 	ret
-
-
-
-
 
 
 calc_expr:
