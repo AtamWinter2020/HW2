@@ -2,15 +2,7 @@
 .global	calc_expr
 
 calc_op:
-	# >>> ord('+')
-	# 43
-	# >>> ord('-')
-	# 45
-	# >>> ord('*')
-	# 42
-	# >>> ord('/')
-	# 47
-
+	# '+' == 43 ; '-' == 45 ; '*' == 42 ; '/' == 47
 	# rdi - op_char ; rsi - num1 ; rdx - num2
 	pushq %rbp
 	movq %rsp, %rbp
@@ -18,24 +10,21 @@ op_add:
 	cmp $43, %rsi
 	jne op_sub
 	addq %rsi, %rdx
-	jmp end_calc_op
+	jmp epilogue_calc_op
 op_sub:
 	cmp $45, %rsi
 	jne op_mult
 	subq %rsi, %rdx
-	jmp end_calc_op
+	jmp epilogue_calc_op
 op_mult:
 	cmp $42, %rsi
 	jne op_div
 	imulq %rsi, %rdx
-	jmp end_calc_op
+	jmp epilogue_calc_op
 op_div:
 	# Assuming cmp $47, %rsi bust be eq
 	idivq %rsi, %rdx
-	jmp end_calc_op
-
-	
-
+	jmp epilogue_calc_op
 epilogue_calc_op:
 	movq %rdx, %rax # Move result to ret reg
 	leave
@@ -45,7 +34,7 @@ epilogue_calc_op:
 calc_expr_overloaded:
 	pushq %rbp
 	movq %rsp, %rbp
-
+	# TODO: Finish
 
 epilogue_overloaded:
 	leave
