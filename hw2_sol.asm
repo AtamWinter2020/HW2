@@ -11,17 +11,17 @@ calc_op:
 	pushq	%rbp
 	movq	%rsp, %rbp
 op_add:
-	cmp		$43, %rsi
+	cmp		$43, %rdi
 	jne		op_sub
 	addq	%rsi, %rdx
 	jmp		epilogue_calc_op
 op_sub:
-	cmp		$45, %rsi
+	cmp		$45, %rdi
 	jne		op_mult
 	subq	%rsi, %rdx
 	jmp		epilogue_calc_op
 op_mult:
-	cmp		$42, %rsi
+	cmp		$42, %rdi
 	jne		op_div
 	imulq	%rsi, %rdx
 	jmp		epilogue_calc_op
@@ -43,6 +43,7 @@ read_char: # rdi - dest addr
 	movq	$0, %rdi	# 0 = stdin
 	movq	$1, %rdx	# Read 1 byte
 	syscall
+	movb	(%rsi), %al # Set return value to the read character
 	leave
 	ret
 
@@ -52,7 +53,7 @@ calc_expr_overloaded:
 	pushq	%rbp
 	movq	%rsp, %rbp
 	subq	$41, %rsp
-	movq	%rdi, -32(%rdi) # Save string_convert until we need it
+	movq	%rdi, -32(%rsp) # Save string_convert until we need it
 	# Calle saved
 	movq	%r14, -24(%rsp)
 	movq	%r13, -16(%rsp)
@@ -68,8 +69,10 @@ calc_expr_overloaded:
 read_loop:
 	# Read char
 	movq	%r13, %rdi		# rdi = i
-	addq	$buf, %rdi		# rdi = curr_cell_addr
-	call read_char
+	addq	$num_buf, %rdi		# rdi = curr_cell_addr
+	call	read_char
+	movb	%al, %r12b	# c = new char
+	movsbq	%r12b, %r12		# Sign extend characer
 	leaq	1(%r13), %r13	# i++
 	# switch(state)
 	jmp		%r14			# Go to state
@@ -80,40 +83,34 @@ s_START:
 	jmp		read_loop		# switch break
 START_else:					# if c == '('
 	movq	$s_EXP1, %r14	# state = EXP1
-	movq	-32(%rdi), %rdi # recovert string_convert
+	movq	-32(%rsp), %rdi # recover string_convert
 	call	calc_expr_overloaded
-	jmp		read_loop		# switch break
+	jmp		epilogue_overloaded	# switch break
 
 s_NUM1:
 	# Make sure '0' <= c <= '9'
-	cmp		%r12, $48
+	cmp		$48, %r12
 	jl		NUM1_elif		# jmp if c < '0'
-	cmp		%r12, $57
+	cmp		$57, %r12
 	jg		NUM1_elif		# c > '9'
 	jmp		read_loop		# switch break
 NUM1_elif:
-	cmp		%r12, $41		# c == ')'
+	cmp		$41, %r12		# c == ')'
 	jne		NUM1_else
-	pushq	%rbx			# Save rbx
-	movq	%rdi, %rbx		# Move string_convert to calee saved (rbx)
-	movq	$buf, %rdi		# rdi = buf
-	movb	$0, -1(%rdi, %r13) # buf[i-1] = '\0'
-	call	%rbx			# Call string_convert(buf)
-	popq	%rbx			# Restore callee saved reg
+	movq	$num_buf, %rdi	# rdi = num_buf
+	movb	$0, -1(%rdi, %r13) # num_buf[i-1] = '\0'
+	call	*-32(%rsp)		# Call string_convert(num_buf)
 	# The string_convert return value is our return value
 	# movq	%rax, %rax
 	jmp		epilogue_overloaded
 NUM1_else:
 	# Assuming c in {-,+,*,/}
-	movq	%r12, -40(%rsp)	# op_char = c
+	movb	%r12b, -40(%rsp)	# op_char = c
+	movq	$s_OP, %r14	# state = OP
 	# Convert string to integer (64 bit)
-	pushq	%rbx			# Save rbx
-	movq	%rdi, %rbx		# Move string_convert to calee saved (rbx)
-	movq	$buf, %rdi		# rdi = buf
-	movb	$0, -1(%rdi, %r13) # buf[i-1] = '\0'
-	call	%rbx			# Call string_convert(buf)
-	movq	%rbx, %rdi		# restore string_convert
-	popq	%rbx			# Restore callee saved reg
+	movq	$num_buf, %rdi	# rdi = num_buf
+	movb	$0, -1(%rdi, %r13) # num_buf[i-1] = '\0'
+	call	*-32(%rsp)		# Call string_convert(num_buf)
 	# End call string_convert
 	movq	%rax, (%rsp)	# num = string_convert result
 	movq	$0, %r13		# i = 0
@@ -121,19 +118,16 @@ NUM1_else:
 
 s_NUM2:
 	# Make sure '0' <= c <= '9'
-	cmp		%r12, $41
+	cmp		$41, %r12
 	je		NUM2_else		# jmp if c == ')'
 	jmp		read_loop		# switch break
 NUM2_else:
 	# Convert string to integer (64 bit)
-	pushq	%rbx			# Save rbx
-	movq	%rdi, %rbx		# Move string_convert to calee saved (rbx)
-	movq	$buf, %rdi		# rdi = buf
-	movb	$0, -1(%rdi, %r13) # buf[i-1] = '\0'
-	call	%rbx			# Call string_convert(buf)
-	popq	%rbx			# Restore callee saved reg
+	movq	$num_buf, %rdi	# rdi = num_buf
+	movb	$0, -1(%rdi, %r13) # num_buf[i-1] = '\0'
+	call	*-32(%rsp)		# Call string_convert(num_buf)
 	# End call string_convert
-	movq	-40(%rsp), %rdi	# op_char is 1st param
+	movb	-40(%rsp), %dil	# op_char is 1st param
 	movq	(%rsp), %rsi	# num is 2nd param
 	movq	%rax, %rdx		# string_convert result is 3rd param
 	call	calc_op
@@ -142,7 +136,7 @@ NUM2_else:
 	jmp		epilogue_overloaded
 
 s_EXP1:
-	cmp		%r12, $41
+	cmp		$41, %r12
 	jne		EXP1_else 		# c == ')'
 	movq	(%rsp), %rax	# Set return value
 	jmp		epilogue_overloaded # Return num
@@ -159,18 +153,18 @@ s_EXP2:
 	jmp		epilogue_overloaded # return nu
 
 s_OP:
-	cmp		%r12, $40
+	cmp		$40, %r12
 	jne		OP_else 		# c == '('
 	movq	$s_EXP2, %r14	# state = EXP2
 	# Call recursively
-	pushq	%rdi			# Backup string_convert
+	movq	-32(%rsp), %rdi	# Set
 	call calc_expr_overloaded
-	popq	%rdi			# Restore string_convert
 	# End recursive call
 	# Call calc_op
-	movq	-40(%rsp), %rsi	# op_char is the 1st param
+	movb	-40(%rsp), %dil	# op_char is the 1st param
 	movq	(%rsp), %rsi	# num is the 2nd param
 	movq	%rax, %rdx		# 3rd param is the recursive call
+	call calc_op
 	# End call calc_op
 	movq	%rax, (%rsp)	# num = result
 	jmp		read_loop 		# switch break
@@ -187,16 +181,19 @@ epilogue_overloaded:
 
 
 calc_expr:
-	pushq %rbp
-	movq %rsp, %rbp
-	pushq %rsi # Backup result_as_string
+	pushq	%rbp
+	movq	%rsp, %rbp
+	pushq	%rsi			# Backup result_as_string
+	pushq	%rdi			# Backup string_convert
+	movq	$num_buf, %rdi	# setup param for read_char
+	call	read_char		# Read first char (should be '(')
+	popq	%rdi			# Restore string_convert
 	
 	# %rdi already contains string_convert
-	call calc_expr_overloaded
-
-	movq %rax, %rdi # Move return value to be the first param
-	popq %rsi
-	call %rsi
+	call	calc_expr_overloaded
+	popq 	%rsi			# Restore result_as_string
+	movq	%rax, %rdi		# Move return value to be the first param
+	call	*%rsi
 
 epilogue_calc_expr:
 	leave
