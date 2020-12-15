@@ -75,7 +75,7 @@ read_loop:
 	jmp		%r14			# Go to state
 s_START:
 	cmp		$40, %r12
-	jeq		START_else		# if c != '(' # Assuming either a digit or a negsign
+	je		START_else		# if c != '(' # Assuming either a digit or a negsign
 	movq	$s_NUM1, %r14	# state = NUM1
 	jmp		read_loop		# switch break
 START_else:					# if c == '('
@@ -120,8 +120,26 @@ NUM1_else:
 	jmp		read_loop		# switch break
 
 s_NUM2:
-# TODO: Implement state
+	# Make sure '0' <= c <= '9'
+	cmp		%r12, $41
+	je		NUM2_else		# jmp if c == ')'
 	jmp		read_loop		# switch break
+NUM2_else:
+	# Convert string to integer (64 bit)
+	pushq	%rbx			# Save rbx
+	movq	%rdi, %rbx		# Move string_convert to calee saved (rbx)
+	movq	$buf, %rdi		# rdi = buf
+	movb	$0, -1(%rdi, %r13) # buf[i-1] = '\0'
+	call	%rbx			# Call string_convert(buf)
+	popq	%rbx			# Restore callee saved reg
+	# End call string_convert
+	movq	-40(%rsp), %rdi	# op_char is 1st param
+	movq	(%rsp), %rsi	# num is 2nd param
+	movq	%rax, %rdx		# string_convert result is 3rd param
+	call	calc_op
+	# result of calc_op is anyways the result of our call
+	# movq	%rax, %rax
+	jmp		epilogue_overloaded
 
 s_EXP1:
 	cmp		%r12, $41
