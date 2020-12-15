@@ -7,11 +7,24 @@
  * This variable will not change.
  */
 char what_to_print[MAX_LEN];
+
+long long calc_op(char op_char, long long num1, long long num2) {
+    switch (op_char) {
+        case '+':
+            return num1 + num2;
+        case '-':
+            return num1 - num2;
+        case '*':
+            return num1 * num2;
+        case '/':
+            return num1 / num2;
+    }
+}
 typedef enum { START, NUM1, NUM2, EXP1, EXP2, OP } State;
 
 long long calc_expr_overloaded(long long (*string_convert)(char *)) {
-    char c;
-    long long first = 0, second = 0;
+    char c, op_char;
+    long long first = 0;
     short i = 0;  // can be a single byte
     char buff[MAX_LONG_LONG];
     State state = START;
@@ -24,8 +37,7 @@ long long calc_expr_overloaded(long long (*string_convert)(char *)) {
                 else {
                     // Assuming c=='('
                     state = EXP1;
-                    first =
-                        calc_expr_overloaded(string_convert);
+                    first = calc_expr_overloaded(string_convert);
                     i = 0;
                 }
                 break;
@@ -37,6 +49,7 @@ long long calc_expr_overloaded(long long (*string_convert)(char *)) {
                     return string_convert(buff);
                 } else {
                     // Assuming c in {-,+,*,/}
+                    op_char = c;
                     state = OP;
                     buff[i - 1] = '\0';
                     first = string_convert(buff);
@@ -47,31 +60,30 @@ long long calc_expr_overloaded(long long (*string_convert)(char *)) {
                 if (c <= '9' && c >= '0')
                     ;
                 else {
-                    // Assuming c=='('
+                    // Assuming c==')'
                     buff[i - 1] = '\0';
-                    return first +
-                           string_convert(buff);  // TODO: Make compatible with
-                                                  // any operator
+                    return calc_op(op_char, first, string_convert(buff));
                 }
                 break;
             case EXP1:
-                first = calc_expr_overloaded(string_convert);
-                if ((c = getchar()) == ')') {
+                if (c == ')') {
                     return first;
                 } else {
-                    // TODO: Save operator
+                    // Assuming c in {-,+,*,/}
+                    op_char = c;
                 }
                 i = 0;
                 state = OP;
                 break;
             case EXP2:
-                second = calc_expr_overloaded(string_convert);
                 // Assuming c == ')'
-                // TODO: Support all the operators
-                return first + second;
+                // This is actually the result (see state OP)
+                return first;
             case OP:
                 if (c == '(') {
                     state = EXP2;
+                    first = calc_op(op_char, first,
+                                    calc_expr_overloaded(string_convert));
                 } else {
                     // Assuming a start of a number
                     state = NUM2;
@@ -79,12 +91,15 @@ long long calc_expr_overloaded(long long (*string_convert)(char *)) {
                 break;
         }
     }
+    // If it reached here, there's an error
+    return -1;
 }
 
 void calc_expr(long long (*string_convert)(char *),
                int (*result_as_string)(long long)) {
-    getchar();
+    getchar();  // Assuming '('
     long long num = calc_expr_overloaded(string_convert);
+    getchar();  // Assuming '\n'
     result_as_string(num);
 }
 
@@ -110,5 +125,6 @@ int result_as_string(long long num) {
 
 int main() {
     calc_expr(&string_convert, &result_as_string);
+    printf("%s", what_to_print);
     return 0;
 }
