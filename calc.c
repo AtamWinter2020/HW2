@@ -31,5 +31,6 @@ int result_as_string(long long num) {
 
 int main() {
     calc_expr(&string_convert, &result_as_string);
+    printf("%s", what_to_print);
     return 0;
 }
