@@ -42,8 +42,8 @@ epilogue_calc_op:
 
 read_char: # rdi - dest addr
 	pushq	%rbp
-	movq	$0, %rax # sys_read
 	movq	%rsp, %rbp
+	movq	$0, %rax # sys_read
 	movq	%rdi, %rsi	# dest addr -> %rsi
 	movq	$0, %rdi	# 0 = stdin
 	movq	$1, %rdx	# Read 1 byte
@@ -51,7 +51,6 @@ read_char: # rdi - dest addr
 	movb	(%rsi), %al # Set return value to the read character
 	leave
 	ret
-
 
 
 calc_expr_overloaded:
