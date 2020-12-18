@@ -193,13 +193,15 @@ calc_expr:
 	pushq	%rdi			# Backup string_convert
 	movq	$num_buf, %rdi	# setup param for read_char
 	call	read_char		# Read first char (should be '(')
-	movq	num_buf, %r8
-	cmp		$10, %r8
-	je		epilogue_calc_expr
 	popq	%rdi			# Restore string_convert
+	movq	num_buf, %r8
+	movq	$0, %rax
+	cmp		$10, %r8
+	je		post_overloaded
 
 	# %rdi already contains string_convert
 	call	calc_expr_overloaded
+post_overloaded:
 	popq 	%rsi			# Restore result_as_string
 	movq	%rax, %rdi		# Move return value to be the first param
 	call	*%rsi
