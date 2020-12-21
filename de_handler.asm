@@ -1,4 +1,4 @@
-.globl my_de_handler
+.global my_de_handler
 .extern what_to_do, old_de_handler
 
 .data
@@ -10,42 +10,29 @@ my_de_handler:
   pushq %rbp
   movq %rsp, %rbp
   
-  # Backing up caller-saved registers
+  pushq %r12
+  pushq %rax
   pushq %rdi
-  pushq %rsi
-  pushq %rdx
-  pushq %rcx
-  pushq %r8
-  pushq %r9
-  pushq %r10
-  pushq %r11
-  # Not sure we need to backup all of it - better safe than sorry
   
   # Preparing arguments for function what_to_do and calling it
   movq %rax , %rdi # numerator is always in rax
   call what_to_do
   
-  # Restoring caller-saved registers
-  popq %r11
-  popq %r10
-  popq %r9
-  popq %r8
-  popq %rcx
-  popq %rdx
-  popq %rsi
   popq %rdi
+  movq %rax, %r12
+  popq %rax
   
-.handler_decision
-  cmp $0, %rax
+  cmp $0, %r12
   jne .what_to_do_returned_non_zero
-  je  .what_to_do_returned_zero
-  
-.what_to_do_returned_non_zero
-  movq %rax, %rsi #rsi should hold the division result
-  leave
-  iretq
-  
-.what_to_do_returned_zero
-  leave
+  popq %r12
   jmp *old_de_handler
+  
+.what_to_do_returned_non_zero:
+  movq %r12, %rax
+  popq %r12
+  leave
+  popq %r15 # should hold rip
+  addq $3, %r15 # skip to next command after idiv
+  pushq %r15
+  iretq
   
