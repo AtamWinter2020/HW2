@@ -69,7 +69,7 @@ calc_expr_overloaded:
 	# States: START = 0, NUM1 = 1, NUM2 = 2, EXP1 = 3, EXP2 = 4, OP = 5
 	# r12 = c ; r13 = i; r14 = state # We only use LSByte of those
 	movq $0, %r13	# i = 0
-	movq $s_START, %r14	# state = 0
+	leaq s_START(%rip), %r14	# state = 0
 
 read_loop:
 	# Read char
@@ -80,14 +80,14 @@ read_loop:
 	movsbq	%r12b, %r12		# Sign extend characer
 	leaq	1(%r13), %r13	# i++
 	# switch(state)
-	jmp		%r14			# Go to state
+	jmp		*%r14			# Go to state
 s_START:
 	cmp		$40, %r12
 	je		START_else		# if c != '(' # Assuming either a digit or a negsign
-	movq	$s_NUM1, %r14	# state = NUM1
+	leaq	s_NUM1(%rip), %r14	# state = NUM1
 	jmp		read_loop		# switch break
 START_else:					# if c == '('
-	movq	$s_EXP1, %r14	# state = EXP1
+	leaq	s_EXP1(%rip), %r14	# state = EXP1
 	movq	-8(%rbp), %rdi # recover string_convert
 	call	calc_expr_overloaded
 	movq	%rax, -40(%rbp)	# num = recursion result
@@ -112,7 +112,7 @@ NUM1_elif:
 NUM1_else:
 	# Assuming c in {-,+,*,/}
 	movb	%r12b, -41(%rbp)	# op_char = c
-	movq	$s_OP, %r14	# state = OP
+	leaq	s_OP(%rip), %r14	# state = OP
 	# Convert string to integer (64 bit)
 	movq	$num_buf, %rdi	# rdi = num_buf
 	movb	$0, -1(%rdi, %r13) # num_buf[i-1] = '\0'
@@ -149,7 +149,7 @@ s_EXP1:
 EXP1_else:					# c != ')'
 	movb	%r12b,-41(%rbp)	# Save operator
 	movq	$0, %r13		# Reset i = 0
-	movq	$s_OP, %r14		# state = OP
+	leaq	s_OP(%rip), %r14		# state = OP
 	jmp		read_loop		# switch break
 
 s_EXP2:
@@ -161,7 +161,7 @@ s_EXP2:
 s_OP:
 	cmp		$40, %r12
 	jne		OP_else 		# c == '('
-	movq	$s_EXP2, %r14	# state = EXP2
+	leaq	s_EXP2(%rip), %r14	# state = EXP2
 	# Call recursively
 	movq	-8(%rbp), %rdi	# Set
 	call calc_expr_overloaded
@@ -175,7 +175,7 @@ s_OP:
 	movq	%rax, -40(%rbp)	# num = result
 	jmp		read_loop 		# switch break
 OP_else:					# c != '('
-	movq	$s_NUM2, %r14	# state = NUM2
+	leaq	s_NUM2(%rip), %r14	# state = NUM2
 	jmp		read_loop		# switch break
 
 epilogue_overloaded:
