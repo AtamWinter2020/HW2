@@ -1,0 +1,17 @@
+tmp*
+*tmp
+*.o
+*.cmd
+*.img
+CMakeError*
+*.bin
+*.cmake
+*.log
+*.json
+*.order
+*.symvers
+*.ko
+a.out
+CMakeC*
+*.marks
+*.mod*
