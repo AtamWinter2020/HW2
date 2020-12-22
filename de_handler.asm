@@ -25,7 +25,9 @@ my_de_handler:
   cmp $0, %r12
   jne .what_to_do_returned_non_zero
   popq %r12
-  jmp *old_de_handler
+  call *old_de_handler
+  leave
+  iretq
   
 .what_to_do_returned_non_zero:
   movq %r12, %rax
