@@ -37,8 +37,7 @@ long long calc_expr_overloaded(long long (*string_convert)(char *)) {
                 else {
                     // Assuming c=='('
                     state = EXP1;
-                    num = calc_expr_overloaded(string_convert);
-                    i = 0;
+                    return calc_expr_overloaded(string_convert);
                 }
                 break;
             case NUM1:
