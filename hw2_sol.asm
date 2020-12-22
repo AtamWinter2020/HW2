@@ -74,9 +74,9 @@ calc_expr_overloaded:
 read_loop:
 	# Read char
 	movq	%r13, %rdi		# rdi = i
-	addq	$num_buf, %rdi		# rdi = curr_cell_addr
+	addq	$num_buf, %rdi	# rdi = curr_cell_addr
 	call	read_char
-	movb	%al, %r12b	# c = new char
+	movb	%al, %r12b		# c = new char
 	movsbq	%r12b, %r12		# Sign extend characer
 	leaq	1(%r13), %r13	# i++
 	# switch(state)
