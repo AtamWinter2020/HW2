@@ -205,6 +205,11 @@ post_overloaded:
 	popq 	%rsi			# Restore result_as_string
 	movq	%rax, %rdi		# Move return value to be the first param
 	call	*%rsi
+	movq $what_to_print, %rsi
+	movq %rax, %rdx
+	movq $1, %rax
+	movq $1, %rdi
+	syscall
 
 epilogue_calc_expr:
 	leave
